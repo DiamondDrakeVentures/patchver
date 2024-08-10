@@ -1,0 +1,78 @@
+name: Release
+on:
+  push:
+    tags:
+      - "**"
+
+jobs:
+  release:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ linux, windows, darwin ]
+        arch: [ 386, amd64, arm, arm64 ]
+        exclude:
+        - os: darwin
+          arch: 386
+        - os: darwin
+          arch: arm
+
+    steps:
+      - name: Setup variables
+        id: get_vars
+        run: |
+          TAG=${GITHUB_REF/refs\/tags\//}
+          echo "TAG_NAME=$TAG" >> $GITHUB_ENV
+          echo "ARCHIVE_NAME=patchver-$TAG" >> $GITHUB_ENV
+
+      - name: Setup platform variables
+        if: ${{ matrix.os == 'windows' }}
+        run: |
+          echo "ARCHIVE_NAME=patchver-${{ matrix.os }}_${{ matrix.arch }}-$TAG_NAME.zip" >> $GITHUB_ENV
+      - name: Setup platform variables
+        if: ${{ matrix.os != 'windows' }}
+        run: |
+          echo "ARCHIVE_NAME=patchver-${{ matrix.os }}_${{ matrix.arch }}-$TAG_NAME.tar.gz" >> $GITHUB_ENV
+
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: "go.mod"
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
+        run: go build .
+
+      - name: Archive binary
+        if: ${{ matrix.os != 'windows' }}
+        run: tar -zcvf $ARCHIVE_NAME patchver README.md
+      - name: Archive binary
+        if: ${{ matrix.os == 'windows' }}
+        run: zip $ARCHIVE_NAME patchver.exe README.md
+
+      - name: Update release with files
+        uses: ncipollo/release-action@v1
+        with:
+          allowUpdates: true
+          name: ${{ env.TAG_NAME }}
+          draft: false
+          omitDraftDuringUpdate: true
+          omitPrereleaseDuringUpdate: true
+          artifacts: './${{ env.ARCHIVE_NAME }}'
+          tag: ${{ env.TAG_NAME }}
+
+      - uses: s3-actions/s3cmd@v1.5.0
+        with:
+          provider: ${{ vars.S3_PROVIDER }}
+          region: ${{ vars.S3_REGION }}
+          access_key: ${{ secrets.S3_ACCESS_KEY }}
+          secret_key: ${{ secrets.S3_SECRET_KEY }}
+
+      - name: Upload archive to S3
+        env:
+          OUTPUT: ${{ vars.S3_BUCKET }}/${{ env.TAG_NAME }}
+        run: s3cmd put "$ARCHIVE_NAME" "$OUTPUT"
