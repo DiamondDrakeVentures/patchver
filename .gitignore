@@ -14,3 +14,6 @@ lost+found
 .vscode
 
 # Project-specific ignores
+*.json
+*.jar
+*.zip
