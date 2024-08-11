@@ -74,5 +74,5 @@ jobs:
 
       - name: Upload archive to S3
         env:
-          OUTPUT: ${{ vars.S3_BUCKET }}/${{ env.TAG_NAME }}
-        run: s3cmd put "$ARCHIVE_NAME" "$OUTPUT"
+          OUTPUT: ${{ vars.S3_BUCKET }}/${{ env.TAG_NAME }}/
+        run: s3cmd put --acl-public "$ARCHIVE_NAME" "$OUTPUT"
