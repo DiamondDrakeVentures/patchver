@@ -1,9 +1,6 @@
 name: Build
 on:
   push:
-    paths:
-      - "!README.md"
-      - "!LICENSE"
     branches:
       - "**"
     tags-ignore:
