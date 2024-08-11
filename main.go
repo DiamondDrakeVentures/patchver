@@ -9,14 +9,15 @@ import (
 	"github.com/alexflint/go-arg"
 )
 
-const UserAgent = "PatchVer/0.1"
+const Name = "PatchVer"
+const Version = "0.1.0"
+const UserAgent = Name + "/" + Version
 
 func main() {
-	err := arg.Parse(&args)
-	if err != nil {
-		fmt.Printf("Cannot parse arguments!\n%v\n", err)
-		os.Exit(1)
-	}
+	var args args
+	arg.MustParse(&args)
+
+	fmt.Println(args.Version())
 
 	conf, err := parseConf(args.Config)
 	if err != nil {
